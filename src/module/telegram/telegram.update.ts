@@ -47,45 +47,4 @@ export class TelegramUpdate {
 			]).resize()
 		)
 	}
-
-	@On('text')
-	async onText(@Ctx() ctx: Context) {
-		switch (ctx.message['text']) {
-			case ActionTitles.FIND_ROOMMATE:
-				console.log('ActionTitles.FIND_ROOMMATE')
-				await ctx.reply('😅 ActionTitles.FIND_ROOMMATE.')
-				break
-
-			case ActionTitles.EDIT_PROFILE:
-				console.log('ActionTitles.EDIT_PROFILE')
-				await ctx.reply('😅 ActionTitles.EDIT_PROFILE.')
-				break
-
-			case ActionTitles.SHOW_PROFILE:
-				const telegramId: number = ctx.from.id
-
-				let account: Account | null =
-					await this.accountService.findByTelegramId(telegramId)
-
-				const renderedProfile = TelegramProfileRenderer.getMediaGroup(
-					account.profile
-				)
-				await ctx.replyWithMediaGroup(renderedProfile)
-
-				await ctx.reply(
-					'Выберите следующее действие:',
-					Markup.keyboard([
-						Buttons.findRoommate(),
-						Buttons.changeProfile()
-					]).resize()
-				)
-
-				break
-
-			default:
-				await ctx.reply(
-					'😅 Не понял. Пожалуйста, выбери вариант с клавиатуры.'
-				)
-		}
-	}
 }

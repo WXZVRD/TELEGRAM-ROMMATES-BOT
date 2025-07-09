@@ -32,5 +32,19 @@ export const Buttons = {
 			ActionTitles.SHOW_PROFILE,
 			CallbackActions.SHOW_PROFILE
 		)
+	},
+
+	backToMenu: (): InlineKeyboardButton.CallbackButton => {
+		return createCallbackButton(
+			ActionTitles.BACK_TO_MENU,
+			CallbackActions.BACK_TO_MENU
+		)
+	},
+
+	likeProfile: (): InlineKeyboardButton.CallbackButton => {
+		return createCallbackButton(
+			ActionTitles.LIKE_PROFILE,
+			CallbackActions.LIKE_PROFILE
+		)
 	}
 } as const

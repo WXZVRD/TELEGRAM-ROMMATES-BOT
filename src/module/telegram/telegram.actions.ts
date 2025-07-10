@@ -79,9 +79,10 @@ export class TelegramActions {
 		let account: Account | null =
 			await this.accountService.findByTelegramId(telegramId)
 
-		const renderedProfile = TelegramProfileRenderer.getMediaGroup(
-			account.profile
-		)
+		const renderedProfile = TelegramProfileRenderer.getMediaGroup({
+			...account.profile,
+			account
+		})
 		await ctx.replyWithMediaGroup(renderedProfile)
 
 		await ctx.reply(

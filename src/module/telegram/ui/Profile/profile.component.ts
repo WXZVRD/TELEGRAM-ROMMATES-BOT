@@ -1,6 +1,7 @@
 import { InputMediaPhoto } from 'telegraf/types'
+import { Account } from '@/module/account/entities/account.entity'
 
-type RenderProfileOptions = {
+export type RenderProfileOptions = {
 	name: string
 	age: number
 	gender: string
@@ -10,12 +11,14 @@ type RenderProfileOptions = {
 	purpose: string
 	description: string
 	photos: string[]
+	account: Account
 }
 
 export class TelegramProfileRenderer {
 	static getText(profile: RenderProfileOptions): string {
 		return [
 			`📋 *Анкета пользователя:*`,
+			`🔗 @${profile.account.username}`,
 			`👤 Имя: ${profile.name}`,
 			`📅 Возраст: ${profile.age}`,
 			`🚻 Пол: ${profile.gender}`,

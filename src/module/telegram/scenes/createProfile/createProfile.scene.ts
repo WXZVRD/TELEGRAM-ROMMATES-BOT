@@ -5,7 +5,10 @@ import { Markup, Scenes } from 'telegraf'
 import { WizardContext } from 'telegraf/scenes'
 import { ProfileService } from '@/module/profile/profile.service'
 import { AccountService } from '@/module/account/account.service'
-import { TelegramProfileRenderer } from '@/module/telegram/ui'
+import {
+	RenderProfileOptions,
+	TelegramProfileRenderer
+} from '@/module/telegram/ui'
 
 type ProfileState = {
 	name?: string
@@ -166,17 +169,20 @@ export class CreateProfileScene {
 		ctx.scene.state.livingCity = city
 
 		const profile = ctx.scene.state
-		console.log(`[Wizard][Final State]:`, profile)
 
 		await ctx.reply('🎉 Ура! Анкета успешно создана.')
 
-		const renderedProfile = TelegramProfileRenderer.getMediaGroup(
-			profile as Required<ProfileState>
-		)
-		await ctx.replyWithMediaGroup(renderedProfile)
-
 		const telegramId = ctx.from.id
 		const account = await this.accountService.findByTelegramId(telegramId)
+
+		const renderData: RenderProfileOptions = {
+			...(profile as Required<Omit<RenderProfileOptions, 'account'>>),
+			account
+		}
+
+		const renderedProfile =
+			TelegramProfileRenderer.getMediaGroup(renderData)
+		await ctx.replyWithMediaGroup(renderedProfile)
 
 		await this.profileService.create({
 			livingCity: profile.livingCity,

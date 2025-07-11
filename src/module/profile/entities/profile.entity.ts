@@ -6,6 +6,7 @@ import {
 	JoinColumn
 } from 'typeorm'
 import { Account } from '@/module/account/entities/account.entity'
+import { GenderType, PurposeEnum } from '@/module/profile/types/profile.types'
 
 @Entity('profiles')
 export class Profile {
@@ -25,11 +26,11 @@ export class Profile {
 	@Column({ type: 'text', nullable: true })
 	description: string
 
-	@Column({ nullable: true })
-	gender: string
+	@Column({ type: 'enum', enum: GenderType, nullable: true })
+	gender: GenderType
 
-	@Column({ nullable: true })
-	preferGender: string
+	@Column({ type: 'enum', enum: GenderType, nullable: true })
+	preferGender: GenderType
 
 	@Column()
 	livingCity: string
@@ -37,8 +38,8 @@ export class Profile {
 	@Column({ nullable: true })
 	relocateCity: string
 
-	@Column()
-	purpose: string
+	@Column({ type: 'enum', enum: PurposeEnum, nullable: true })
+	purpose: PurposeEnum
 
 	@Column('text', { array: true, nullable: true })
 	photos: string[]

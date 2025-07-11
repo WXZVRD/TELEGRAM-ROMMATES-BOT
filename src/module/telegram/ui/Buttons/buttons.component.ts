@@ -6,6 +6,13 @@ import {
 } from '@/module/telegram/types/callbackActions.enum'
 
 export const Buttons = {
+	primary: (
+		title: string,
+		action: string
+	): InlineKeyboardButton.CallbackButton => {
+		return createCallbackButton(title, action)
+	},
+
 	findRoommate: (): InlineKeyboardButton.CallbackButton => {
 		return createCallbackButton(
 			ActionTitles.FIND_ROOMMATE,

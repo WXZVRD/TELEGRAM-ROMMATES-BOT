@@ -53,5 +53,26 @@ export const Buttons = {
 			ActionTitles.LIKE_PROFILE,
 			CallbackActions.LIKE_PROFILE
 		)
+	},
+
+	skipProfile: (): InlineKeyboardButton.CallbackButton => {
+		return createCallbackButton(
+			ActionTitles.SKIP_PROFILE,
+			CallbackActions.SKIP_PROFILE
+		)
+	},
+
+	deactivateProfile: (): InlineKeyboardButton.CallbackButton => {
+		return createCallbackButton(
+			ActionTitles.DEACTIVATE_PROFILE,
+			CallbackActions.DEACTIVATE_PROFILE
+		)
+	},
+
+	recreateProfile: (): InlineKeyboardButton.CallbackButton => {
+		return createCallbackButton(
+			ActionTitles.REACREATE_PROFILE,
+			CallbackActions.REACREATE_PROFILE
+		)
 	}
 } as const

@@ -8,33 +8,42 @@ export type RenderProfileOptions = {
 	preferGender: string
 	livingCity: string
 	relocateCity: string
-	purpose: string
 	description: string
 	photos: string[]
 	account: Account
 }
 
 export class TelegramProfileRenderer {
-	static getText(profile: RenderProfileOptions): string {
-		return [
-			`📋 *Анкета пользователя:*`,
-			`🔗 @${profile.account.username}`,
-			`👤 Имя: ${profile.name}`,
-			`📅 Возраст: ${profile.age}`,
+	static getText(
+		profile: RenderProfileOptions,
+		showLink: boolean = false
+	): string {
+		const lines: string[] = [
+			`📋 *Анкета пользователя:* \n`,
+			showLink && profile.account.username
+				? `🔗 @${profile.account.username || profile.account.telegramId}`
+				: null,
+			`👤 ${profile.name} ${profile.age}, ${profile.livingCity}`,
 			`🚻 Пол: ${profile.gender}`,
-			`🔍 Ищет: ${profile.preferGender}`,
-			`📍 Город: ${profile.relocateCity}`,
-			`🏠 Проживает: ${profile.livingCity}`,
-			`🎯 Цель: ${profile.purpose}`,
-			`📝 Описание: ${profile.description}`,
-			`🖼 Фото: ${profile.photos.length} шт.`
-		].join('\n')
+			`🔍 Пол сожителя: ${profile.preferGender}`,
+			`📍 Ищет в городе: ${profile.relocateCity} \n`,
+			`📝 Описание: ${profile.description}`
+		]
+
+		return lines.filter(Boolean).join('\n')
 	}
 
-	static getMediaGroup(profile: RenderProfileOptions): InputMediaPhoto[] {
-		const text = TelegramProfileRenderer.getText(profile)
+	static getMediaGroup(
+		profile: RenderProfileOptions,
+		showLink: boolean = false
+	): InputMediaPhoto[] | null {
+		const text: string = TelegramProfileRenderer.getText(profile)
 
-		return profile.photos.map((fileId, idx) => ({
+		if (!Array.isArray(profile.photos) || profile.photos.length === 0) {
+			return null
+		}
+
+		return profile.photos.map((fileId: string, idx: number) => ({
 			type: 'photo',
 			media: fileId,
 			...(idx === 0 && {
@@ -42,5 +51,23 @@ export class TelegramProfileRenderer {
 				parse_mode: 'Markdown'
 			})
 		}))
+	}
+
+	static async sendProfile(
+		ctx: any,
+		profile: RenderProfileOptions,
+		showLink: boolean = false
+	): Promise<void> {
+		const mediaGroup: InputMediaPhoto[] = this.getMediaGroup(
+			profile,
+			showLink
+		)
+
+		if (mediaGroup && mediaGroup.length > 0) {
+			await ctx.replyWithMediaGroup(mediaGroup)
+		} else {
+			const text: string = this.getText(profile, showLink)
+			await ctx.reply(text, { parse_mode: 'Markdown' })
+		}
 	}
 }

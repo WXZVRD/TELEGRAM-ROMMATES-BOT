@@ -18,21 +18,21 @@ import {
 	CreateProfileContext,
 	ProfileState
 } from '@/module/telegram/scenes/scene.type'
-import { UserContextService } from '@/module/telegram/user.context.service'
-import { MenuManagerService } from '@/module/telegram/modules/menu/menuManager.service'
+import { REDIS_KEY_PROFILE_SESSION_KEY } from '@/module/redis/constants'
 import { Account } from '@/module/account/entities/account.entity'
+import { MenuManagerService } from '@/module/telegram/modules/menu/menuManager.service'
 import { Profile } from '@/module/profile/entities/profile.entity'
-import { AccountService } from '@/module/account/account.service'
+import { UserContextService } from '@/module/telegram/user.context.service'
+import { InputMediaPhoto } from 'telegraf/types'
 
 @Injectable()
-@Wizard(ScenesData.CREATE_PROFILE)
-@Scene(ScenesData.CREATE_PROFILE)
-export class CreateProfileScene {
+@Wizard(ScenesData.EDIT_PROFILE)
+@Scene(ScenesData.EDIT_PROFILE)
+export class EditProfileScene {
 	constructor(
 		private readonly profileService: ProfileService,
-		private readonly accountService: AccountService,
-		private readonly userContextService: UserContextService,
-		private readonly menuManagerService: MenuManagerService
+		private readonly menuManagerService: MenuManagerService,
+		private readonly userContextService: UserContextService
 	) {}
 
 	private logStep(
@@ -49,11 +49,54 @@ export class CreateProfileScene {
 	@WizardStep(0)
 	async step0(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		console.log(
-			`[Wizard][step0] Started by: @${ctx.from?.username ?? 'unknown'}`
+			`[Wizard][step0] Started by: @${ctx.from?.username ?? 'unknown'} | id: ${ctx.from?.id}`
 		)
 
-		await ctx.reply('1. ✒️ Как тебя зовут?')
+		const cachedProfile = ctx.session[REDIS_KEY_PROFILE_SESSION_KEY()]
+		if (cachedProfile) {
+			console.log(
+				'[Wizard][step0] Profile loaded from cache:',
+				cachedProfile
+			)
 
+			ctx.scene.state = {
+				...ctx.scene.state,
+				...cachedProfile
+			}
+		} else {
+			console.log('[Wizard][step0] No cached profile, loading from DB...')
+
+			const account: Account =
+				await this.userContextService.getAccount(ctx)
+			if (!account?.profile) {
+				console.warn(
+					`[Wizard][step0] No profile found in DB for Telegram ID: ${ctx.from.id}`
+				)
+				await ctx.reply(
+					'❌ Не удалось найти ваш профиль. Попробуйте позже.'
+				)
+				await ctx.scene.leave()
+				return
+			}
+
+			const profile = account.profile
+			console.log('[Wizard][step0] Profile loaded from DB:', profile)
+
+			ctx.session[REDIS_KEY_PROFILE_SESSION_KEY()] = profile
+			ctx.scene.state = {
+				...ctx.scene.state,
+				...profile
+			}
+		}
+
+		console.log('[Wizard][step0] Final scene state:', ctx.scene.state)
+
+		await ctx.reply(
+			'✒️ Как тебя зовут?',
+			Markup.keyboard([
+				Buttons.primary(ctx.scene.state.name, '')
+			]).resize()
+		)
 		ctx.wizard.next()
 	}
 
@@ -61,7 +104,7 @@ export class CreateProfileScene {
 	async step1(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		const nameInput = ctx.message['text']
 
-		const isNameValid: boolean = isValidName(nameInput)
+		const isNameValid = isValidName(nameInput)
 
 		this.logStep(ctx, '1 - name', nameInput)
 
@@ -73,13 +116,19 @@ export class CreateProfileScene {
 		ctx.scene.state.name = nameInput
 		console.log('✅ Имя сохранено:', nameInput)
 
-		await ctx.reply('2. 📅 Сколько тебе лет?')
+		await ctx.reply(
+			'📅 Сколько тебе лет?',
+			Markup.keyboard([
+				Buttons.primary(ctx.scene.state.age.toString(), '')
+			]).resize()
+		)
 		ctx.wizard.next()
 	}
 
 	@WizardStep(2)
 	async step2(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		const ageInput = ctx.message['text']
+
 		const age = parseInt(ageInput)
 
 		this.logStep(ctx, '2 - age input', age)
@@ -93,7 +142,7 @@ export class CreateProfileScene {
 		console.log('✅ Возраст сохранён:', age)
 
 		await ctx.reply(
-			'3. 🚻 Какой у тебя пол?',
+			'🚻 Какой у тебя пол?',
 			Markup.keyboard([
 				[
 					Buttons.primary(GenderType.MALE, 'male'),
@@ -108,9 +157,9 @@ export class CreateProfileScene {
 	@WizardStep(3)
 	async step3(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		const genderInput = ctx.message['text'].trim().toLowerCase()
-		const normalizedGender: string = normalizeInput(genderInput)
+		const normalizedGender = normalizeInput(genderInput)
 
-		const isGenderValid: boolean = isValidGender(normalizedGender)
+		const isGenderValid = isValidGender(normalizedGender)
 		if (!isGenderValid) {
 			await ctx.reply(
 				'❌ Укажите свой пол (парень или девушка).',
@@ -126,7 +175,7 @@ export class CreateProfileScene {
 
 		ctx.scene.state.gender = genderInput
 		await ctx.reply(
-			'4. 🔍 Кого ты ищешь? (парень / девушка / не важно)',
+			'🔍 Кого ты ищешь? (парень / девушка / не важно)',
 			Markup.keyboard([
 				[
 					Buttons.primary(GenderType.MALE, 'парень'),
@@ -162,8 +211,10 @@ export class CreateProfileScene {
 
 		ctx.scene.state.preferGender = genderInput
 		await ctx.reply(
-			'5. 📍 В каком городе вы ищете соседа?',
-			Markup.removeKeyboard()
+			'📍 В каком городе вы ищете соседа?',
+			Markup.keyboard([
+				Buttons.primary(ctx.scene.state.relocateCity, '')
+			]).resize()
 		)
 
 		ctx.wizard.next()
@@ -172,7 +223,8 @@ export class CreateProfileScene {
 	@WizardStep(5)
 	async step5(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		const cityInput = ctx.message['text']
-		const normalizedCityInput = normalizeInput(cityInput)
+
+		const normalizedCityInput: string = normalizeInput(cityInput)
 
 		if (!isValidString(normalizedCityInput)) {
 			await ctx.reply('❌ Введите город.')
@@ -182,10 +234,9 @@ export class CreateProfileScene {
 		ctx.scene.state.relocateCity = normalizedCityInput
 
 		await ctx.reply(
-			'6. 📷 Отправьте до 3-х фотографий по одной. Когда закончите — нажмите "✅ Готово".',
+			'📷 Отправьте до 3-х фотографий по одной. Когда закончите — нажмите "✅ Готово".',
 			Markup.keyboard([['✅ Готово']]).resize()
 		)
-
 		ctx.wizard.next()
 	}
 
@@ -196,13 +247,16 @@ export class CreateProfileScene {
 
 		state.photos ||= []
 
-		if ('text' in msg && msg.text === 'Готово') {
+		if ('text' in msg && msg.text === '✅ Готово') {
 			if (state.photos.length === 0) {
 				await ctx.reply('❌ Сначала отправьте хотя бы одно фото.')
 				return
 			}
 			await ctx.reply(
-				'7. ✏️ Оставьте описание или свои пожелания к соседу:'
+				'✏️ Опишите свои пожелания к соседу:',
+				Markup.keyboard([
+					Buttons.primary('Оставить текущее', '')
+				]).resize()
 			)
 			ctx.wizard.next()
 			return
@@ -224,20 +278,30 @@ export class CreateProfileScene {
 				'✅ Загружено 3 фото. Переходим далее...',
 				Markup.removeKeyboard()
 			)
-			await ctx.reply('✏️ Опишите свои пожелания:')
+			await ctx.reply(
+				'✏️ Опишите свои пожелания:',
+				Markup.keyboard([
+					Buttons.primary('Оставить текущее', '')
+				]).resize()
+			)
 			ctx.wizard.next()
 			return
 		}
 
 		await ctx.reply(
 			`✅ Фото сохранено. Осталось ${3 - state.photos.length}.`,
-			Markup.keyboard([['Готово']]).resize()
+			Markup.keyboard([['✅ Готово']]).resize()
 		)
 	}
 
 	@WizardStep(7)
 	async step8(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		const description = ctx.message['text']
+
+		if (description.trim() === 'Оставить текущее') {
+			ctx.wizard.next()
+			return
+		}
 
 		if (typeof description !== 'string') {
 			await ctx.reply('❌ Опишите ваши пожелания.')
@@ -246,46 +310,63 @@ export class CreateProfileScene {
 
 		ctx.scene.state.description = description
 
-		await ctx.reply('8. 🎯 Где вы сейчас прорживаете?')
+		await ctx.reply(
+			'🎯 Где вы сейчас проживаете?',
+			Markup.keyboard([
+				Buttons.primary(ctx.scene.state.livingCity, '')
+			]).resize()
+		)
 		ctx.wizard.next()
 	}
 
 	@WizardStep(8)
 	async step9(@Ctx() ctx: CreateProfileContext): Promise<void> {
 		const city = ctx.message['text']
-		this.logStep(ctx, '9 - living city', city)
-		if (!isValidString(city)) {
-			await ctx.reply('9. ❌ Введите город.')
-			return
-		}
 
-		ctx.scene.state.livingCity = city
+		if (city !== 'Оставить текущее') {
+			this.logStep(ctx, '9 - living city', city)
+			if (!isValidString(city)) {
+				await ctx.reply('❌ Введите город.')
+				return
+			}
+
+			ctx.scene.state.livingCity = city
+		}
 
 		const profile: Object & ProfileState = ctx.scene.state
 
-		await ctx.reply('🎉 Ура! Анкета успешно создана.')
+		await ctx.reply('🎉 Ура! Анкета успешно пересоздана.')
+
 		const account: Account = await this.userContextService.getAccount(ctx)
 
-		const createdProfile: Profile = await this.profileService.create({
-			livingCity: profile.livingCity,
-			description: profile.description,
-			age: profile.age,
-			gender: profile.gender,
-			relocateCity: profile.relocateCity,
-			name: profile.name,
-			photos: profile.photos,
-			isActive: true,
-			preferGender: profile.preferGender,
-			account: account
-		})
-
-		account.profile = createdProfile
-		await this.accountService.saveAccount(account)
+		const renderData: RenderProfileOptions = {
+			...(profile as Required<Omit<RenderProfileOptions, 'account'>>),
+			account
+		}
 
 		await TelegramProfileRenderer.sendProfile(ctx, {
-			...createdProfile,
+			...account.profile,
 			account
 		})
+
+		const savedProfile: Profile = await this.profileService.editProfile(
+			{
+				livingCity: profile.livingCity,
+				description: profile.description,
+				age: profile.age,
+				gender: profile.gender,
+				relocateCity: profile.relocateCity,
+				name: profile.name,
+				photos: profile.photos,
+				isActive: account.profile.isActive,
+				preferGender: profile.preferGender,
+				account: account
+			},
+			account.profile.id
+		)
+
+		delete ctx.session[REDIS_KEY_PROFILE_SESSION_KEY()]
+		ctx.session[REDIS_KEY_PROFILE_SESSION_KEY()] = savedProfile
 
 		await this.menuManagerService.send(ctx, 'MAIN_MENU')
 

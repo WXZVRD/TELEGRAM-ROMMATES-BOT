@@ -6,7 +6,7 @@ import {
 	JoinColumn
 } from 'typeorm'
 import { Account } from '@/module/account/entities/account.entity'
-import { GenderType, PurposeEnum } from '@/module/profile/types/profile.types'
+import { GenderType } from '@/module/profile/types/profile.types'
 
 @Entity('profiles')
 export class Profile {
@@ -14,7 +14,6 @@ export class Profile {
 	id: number
 
 	@OneToOne(() => Account, account => account.profile)
-	@JoinColumn()
 	account: Account
 
 	@Column()
@@ -37,9 +36,6 @@ export class Profile {
 
 	@Column({ nullable: true })
 	relocateCity: string
-
-	@Column({ type: 'enum', enum: PurposeEnum, nullable: true })
-	purpose: PurposeEnum
 
 	@Column('text', { array: true, nullable: true })
 	photos: string[]

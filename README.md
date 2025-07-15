@@ -12,7 +12,7 @@
 
 ## 🚀 Демонстрация
 
-🌐 **Бот в Telegram**: [@roommate_finder_bot](https://t.me/roommate_finder_bot)
+🌐 **Бот в Telegram**: [@roommate_finder_bot](https://t.me/zhilbylchik_bot)
 
 ---
 

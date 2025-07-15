@@ -37,7 +37,7 @@ export class TelegramProfileRenderer {
 		profile: RenderProfileOptions,
 		showLink: boolean = false
 	): InputMediaPhoto[] | null {
-		const text: string = TelegramProfileRenderer.getText(profile)
+		const text: string = TelegramProfileRenderer.getText(profile, showLink)
 
 		if (!Array.isArray(profile.photos) || profile.photos.length === 0) {
 			return null

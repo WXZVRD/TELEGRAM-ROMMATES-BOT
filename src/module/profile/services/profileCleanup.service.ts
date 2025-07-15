@@ -8,7 +8,7 @@ export class ProfileCleanupService {
 
 	constructor(private readonly viewedRepo: ViewedRepository) {}
 
-	@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+	@Cron(CronExpression.EVERY_5_MINUTES)
 	async fullCleanRepo(): Promise<void> {
 		this.logger.log('🕛 Очистка viewed_profiles')
 

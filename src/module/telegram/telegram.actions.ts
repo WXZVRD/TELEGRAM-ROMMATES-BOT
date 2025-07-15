@@ -154,7 +154,7 @@ export class TelegramActions {
 		}
 
 		ctx.session.currentProfileIndex = 0
-		const nextProfile = matchesProfiles[0]
+		const nextProfile: Profile = matchesProfiles[0]
 		logger.log(`Показ следующей анкеты ID: ${nextProfile.id}`)
 
 		await TelegramProfileRenderer.sendProfile(ctx, {
@@ -217,6 +217,7 @@ export class TelegramActions {
 				}
 			}
 		)
+
 		logger.log(
 			`Уведомление отправлено пользователю ${likedProfile.account.telegramId}`
 		)
@@ -248,7 +249,7 @@ export class TelegramActions {
 	}
 
 	@On('callback_query')
-	async onLikedBy(@Ctx() ctx: BotContext) {
+	async onLiked(@Ctx() ctx: BotContext): Promise<void> {
 		const logger: Logger = new Logger('LIKED_BY_CALLBACK')
 		logger.log(`Обработка callback_query от пользователя ${ctx.from.id}`)
 
@@ -282,10 +283,14 @@ export class TelegramActions {
 			`Профиль ${likerId} будет показан пользователю ${ctx.from.id}`
 		)
 
-		await TelegramProfileRenderer.sendProfile(ctx, {
-			...profile,
-			account: profile.account
-		})
+		await TelegramProfileRenderer.sendProfile(
+			ctx,
+			{
+				...profile,
+				account: profile.account
+			},
+			true
+		)
 	}
 
 	@Hears(ActionTitles.EDIT_PROFILE)
